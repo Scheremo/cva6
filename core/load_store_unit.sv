@@ -161,7 +161,9 @@ module load_store_unit
   assign vaddr_i = vaddr_xlen[riscv::VLEN-1:0];
   // we work with SV39 or SV32, so if VM is enabled, check that all bits [XLEN-1:38] or [XLEN-1:31] are equal
   assign overflow = (riscv::IS_XLEN64 && (!((&vaddr_xlen[riscv::XLEN-1:riscv::SV-1]) == 1'b1 || (|vaddr_xlen[riscv::XLEN-1:riscv::SV-1]) == 1'b0)));
-  assign g_overflow = (CVA6Cfg.RVH) ? !((|vaddr_xlen[riscv::XLEN-1:riscv::SVX]) == 1'b0) : 1'b0;
+   assign g_overflow = 1'b0;
+
+//  assign g_overflow = (riscv::IS_XLEN64 && CVA6Cfg.RVH) ? !((|vaddr_xlen[riscv::XLEN-1:riscv::SVX]) == 1'b0) : 1'b0;
 
   logic                   st_valid_i;
   logic                   ld_valid_i;
@@ -684,4 +686,3 @@ module load_store_unit
   assign rvfi_lsu_ctrl_o = lsu_ctrl;
 
 endmodule
-
