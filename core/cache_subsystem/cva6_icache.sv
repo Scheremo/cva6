@@ -29,39 +29,39 @@ module cva6_icache
   import ariane_pkg::*;
   import wt_cache_pkg::*;
 #(
-    parameter config_pkg::cva6_cfg_t CVA6Cfg = config_pkg::cva6_cfg_empty,
-    /// ID to be used for read transactions
-    parameter logic [MEM_TID_WIDTH-1:0] RdTxId = 0
+  parameter config_pkg::cva6_cfg_t CVA6Cfg = config_pkg::cva6_cfg_empty,
+  /// ID to be used for read transactions
+  parameter logic [MEM_TID_WIDTH-1:0] RdTxId = 0
 ) (
-    input logic clk_i,
-    input logic rst_ni,
+  input logic clk_i,
+  input logic rst_ni,
 
-    /// flush the icache, flush and kill have to be asserted together
-    input  logic         flush_i,
-    /// enable icache
-    input  logic         en_i,
-    /// to performance counter
-    output logic         miss_o,
-    output logic         busy_o,
-    input  logic         stall_i,
-    input  logic         init_ni,         // do not init after enabling
-    // address translation requests
-    input  icache_areq_t areq_i,
-    output icache_arsp_t areq_o,
-    // data requests
-    input  icache_dreq_t dreq_i,
-    output icache_drsp_t dreq_o,
-    // refill port
-    input  logic         mem_rtrn_vld_i,
-    input  icache_rtrn_t mem_rtrn_i,
-    output logic         mem_data_req_o,
-    input  logic         mem_data_ack_i,
-    output icache_req_t  mem_data_o
+  /// flush the icache, flush and kill have to be asserted together
+  input  logic         flush_i,
+  /// enable icache
+  input  logic         en_i,
+  /// to performance counter
+  output logic         miss_o,
+  output logic         busy_o,
+  input  logic         stall_i,
+  input  logic         init_ni,         // do not init after enabling
+  // address translation requests
+  input  icache_areq_t areq_i,
+  output icache_arsp_t areq_o,
+  // data requests
+  input  icache_dreq_t dreq_i,
+  output icache_drsp_t dreq_o,
+  // refill port
+  input  logic         mem_rtrn_vld_i,
+  input  icache_rtrn_t mem_rtrn_i,
+  output logic         mem_data_req_o,
+  input  logic         mem_data_ack_i,
+  output icache_req_t  mem_data_o
 );
 
   // functions
   function automatic logic [ariane_pkg::ICACHE_SET_ASSOC-1:0] icache_way_bin2oh(
-      input logic [L1I_WAY_WIDTH-1:0] in);
+    input logic [L1I_WAY_WIDTH-1:0] in);
     logic [ariane_pkg::ICACHE_SET_ASSOC-1:0] out;
     out     = '0;
     out[in] = 1'b1;
@@ -76,8 +76,8 @@ module cva6_icache
   logic                        cache_rden;  // triggers cache lookup
   logic                        cache_wren;  // triggers write to cacheline
   logic
-      cmp_en_d,
-      cmp_en_q;  // enable tag comparison in next cycle. used to cut long path due to NC signal.
+    cmp_en_d,
+    cmp_en_q;  // enable tag comparison in next cycle. used to cut long path due to NC signal.
   logic flush_d, flush_q;  // used to register and signal pending flushes
 
   // replacement strategy
@@ -133,7 +133,7 @@ module cva6_icache
 
   // noncacheable if request goes to I/O space, or if cache is disabled
   assign paddr_is_nc = (~cache_en_q) | (~config_pkg::is_inside_cacheable_regions(
-      CVA6Cfg, {{64 - riscv::PLEN{1'b0}}, cl_tag_d, {ICACHE_INDEX_WIDTH{1'b0}}}
+    CVA6Cfg, {{64 - riscv::PLEN{1'b0}}, cl_tag_d, {ICACHE_INDEX_WIDTH{1'b0}}}
   ));
 
   // pass exception through
@@ -152,14 +152,14 @@ module cva6_icache
     // if we generate a noncacheable access, the word will be at offset 0 or 4 in the cl coming from memory
     assign cl_offset_d = ( dreq_o.ready & dreq_i.req)      ? {dreq_i.vaddr[ICACHE_OFFSET_WIDTH-1:2], 2'b0} :
                          ( paddr_is_nc  & mem_data_req_o ) ? {{ICACHE_OFFSET_WIDTH-1{1'b0}}, cl_offset_q[2]}<<2 : // needed since we transfer 32bit over a 64bit AXI bus in this case
-        cl_offset_q;
+      cl_offset_q;
     // request word address instead of cl address in case of NC access
-    assign mem_data_o.paddr = (paddr_is_nc) ? {cl_tag_d, vaddr_q[ICACHE_INDEX_WIDTH-1:3], 3'b0} :                                         // align to 64bit
-        {cl_tag_d, vaddr_q[ICACHE_INDEX_WIDTH-1:$clog2(
-            riscv::XLEN/8
-        )], {$clog2(
-            riscv::XLEN / 8
-        ) {1'b0}}};  // align to cl
+    assign mem_data_o.paddr = (paddr_is_nc) ? {cl_tag_d, vaddr_q[ICACHE_INDEX_WIDTH-1:$clog2(
+        riscv::XLEN/8
+      )], {$clog2(
+        riscv::XLEN / 8
+      ) {1'b0}}} :  // align to XLEN
+      {cl_tag_d, vaddr_q[ICACHE_INDEX_WIDTH-1:ICACHE_OFFSET_WIDTH], {ICACHE_OFFSET_WIDTH{1'b0}}}; // align to cl
   end else begin : gen_piton_offset
     // icache fills are either cachelines or 4byte fills, depending on whether they go to the Piton I/O space or not.
     // since the piton cache system replicates the data, we can always index the full CL
@@ -167,7 +167,7 @@ module cva6_icache
 
     // request word address instead of cl address in case of NC access
     assign mem_data_o.paddr = (paddr_is_nc) ? {cl_tag_d, vaddr_q[ICACHE_INDEX_WIDTH-1:2], 2'b0} :                                         // align to 32bit
-        {cl_tag_d, vaddr_q[ICACHE_INDEX_WIDTH-1:ICACHE_OFFSET_WIDTH], {ICACHE_OFFSET_WIDTH{1'b0}}}; // align to cl
+      {cl_tag_d, vaddr_q[ICACHE_INDEX_WIDTH-1:ICACHE_OFFSET_WIDTH], {ICACHE_OFFSET_WIDTH{1'b0}}}; // align to cl
   end
 
 
@@ -186,7 +186,7 @@ module cva6_icache
   ///////////////////////////////////////////////////////
   logic addr_ni;
   assign addr_ni = config_pkg::is_inside_nonidempotent_regions(
-      CVA6Cfg, {{64 - riscv::PLEN{1'b0}}, areq_i.fetch_paddr}
+    CVA6Cfg, {{64 - riscv::PLEN{1'b0}}, areq_i.fetch_paddr}
   );
   always_comb begin : p_fsm
     // default assignment
@@ -376,7 +376,7 @@ module cva6_icache
   assign vld_req  = (flush_en || cache_rden)        ? '1                                    :
                     (mem_rtrn_i.inv.all && inv_en)  ? '1                                    :
                     (mem_rtrn_i.inv.vld && inv_en)  ? icache_way_bin2oh(
-      mem_rtrn_i.inv.way
+    mem_rtrn_i.inv.way
   ) : repl_way_oh_q;
 
   assign vld_wdata = (cache_wren) ? '1 : '0;
@@ -397,22 +397,22 @@ module cva6_icache
 
   // find invalid cache line
   lzc #(
-      .WIDTH(ICACHE_SET_ASSOC)
+    .WIDTH(ICACHE_SET_ASSOC)
   ) i_lzc (
-      .in_i   (~vld_rdata),
-      .cnt_o  (inv_way),
-      .empty_o(all_ways_valid)
+    .in_i   (~vld_rdata),
+    .cnt_o  (inv_way),
+    .empty_o(all_ways_valid)
   );
 
   // generate random cacheline index
   lfsr #(
-      .LfsrWidth(8),
-      .OutWidth ($clog2(ariane_pkg::ICACHE_SET_ASSOC))
+    .LfsrWidth(8),
+    .OutWidth ($clog2(ariane_pkg::ICACHE_SET_ASSOC))
   ) i_lfsr (
-      .clk_i (clk_i),
-      .rst_ni(rst_ni),
-      .en_i  (update_lfsr),
-      .out_o (rnd_way)
+    .clk_i (clk_i),
+    .rst_ni(rst_ni),
+    .en_i  (update_lfsr),
+    .out_o (rnd_way)
   );
 
 
@@ -430,11 +430,11 @@ module cva6_icache
 
 
   lzc #(
-      .WIDTH(ICACHE_SET_ASSOC)
+    .WIDTH(ICACHE_SET_ASSOC)
   ) i_lzc_hit (
-      .in_i   (cl_hit),
-      .cnt_o  (hit_idx),
-      .empty_o()
+    .in_i   (cl_hit),
+    .cnt_o  (hit_idx),
+    .empty_o()
   );
 
   always_comb begin
@@ -457,22 +457,22 @@ module cva6_icache
   for (genvar i = 0; i < ICACHE_SET_ASSOC; i++) begin : gen_sram
     // Tag RAM
     sram #(
-        // tag + valid bit
-        .DATA_WIDTH(ICACHE_TAG_WIDTH + 1),
-        .NUM_WORDS (ICACHE_NUM_WORDS)
+      // tag + valid bit
+      .DATA_WIDTH(ICACHE_TAG_WIDTH + 1),
+      .NUM_WORDS (ICACHE_NUM_WORDS)
     ) tag_sram (
-        .clk_i  (clk_i),
-        .rst_ni (rst_ni),
-        .req_i  (vld_req[i]),
-        .we_i   (vld_we),
-        .addr_i (vld_addr),
-        // we can always use the saved tag here since it takes a
-        // couple of cycle until we write to the cache upon a miss
-        .wuser_i('0),
-        .wdata_i({vld_wdata[i], cl_tag_q}),
-        .be_i   ('1),
-        .ruser_o(),
-        .rdata_o(cl_tag_valid_rdata[i])
+      .clk_i  (clk_i),
+      .rst_ni (rst_ni),
+      .req_i  (vld_req[i]),
+      .we_i   (vld_we),
+      .addr_i (vld_addr),
+      // we can always use the saved tag here since it takes a
+      // couple of cycle until we write to the cache upon a miss
+      .wuser_i('0),
+      .wdata_i({vld_wdata[i], cl_tag_q}),
+      .be_i   ('1),
+      .ruser_o(),
+      .rdata_o(cl_tag_valid_rdata[i])
     );
 
     assign cl_tag_rdata[i] = cl_tag_valid_rdata[i][ICACHE_TAG_WIDTH-1:0];
@@ -480,21 +480,21 @@ module cva6_icache
 
     // Data RAM
     sram #(
-        .USER_WIDTH(ICACHE_USER_LINE_WIDTH),
-        .DATA_WIDTH(ICACHE_LINE_WIDTH),
-        .USER_EN   (ariane_pkg::FETCH_USER_EN),
-        .NUM_WORDS (ICACHE_NUM_WORDS)
+      .USER_WIDTH(ICACHE_USER_LINE_WIDTH),
+      .DATA_WIDTH(ICACHE_LINE_WIDTH),
+      .USER_EN   (ariane_pkg::FETCH_USER_EN),
+      .NUM_WORDS (ICACHE_NUM_WORDS)
     ) data_sram (
-        .clk_i  (clk_i),
-        .rst_ni (rst_ni),
-        .req_i  (cl_req[i]),
-        .we_i   (cl_we),
-        .addr_i (cl_index),
-        .wuser_i(mem_rtrn_i.user),
-        .wdata_i(mem_rtrn_i.data),
-        .be_i   ('1),
-        .ruser_o(cl_ruser[i]),
-        .rdata_o(cl_rdata[i])
+      .clk_i  (clk_i),
+      .rst_ni (rst_ni),
+      .req_i  (cl_req[i]),
+      .we_i   (cl_we),
+      .addr_i (cl_index),
+      .wuser_i(mem_rtrn_i.user),
+      .wdata_i(mem_rtrn_i.data),
+      .be_i   ('1),
+      .ruser_o(cl_ruser[i]),
+      .rdata_o(cl_rdata[i])
     );
   end
 
@@ -549,7 +549,7 @@ module cva6_icache
   hot1 :
   assert property (
     @(posedge clk_i) disable iff (!rst_ni) (!inv_en) |-> cache_rden |=> cmp_en_q |-> $onehot0(
-      cl_hit
+    cl_hit
   ))
   else $fatal(1, "[l1 icache] cl_hit signal must be hot1");
 
