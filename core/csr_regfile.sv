@@ -936,10 +936,12 @@ module csr_regfile
     icache_d = icache_q;
     acc_cons_d = acc_cons_q;
     fence_t_pad_d = fence_t_pad_q;
-    fence_t_ceil_d = {
-      fence_t_ceil_q[63:32],
-      (fence_t_ceil_i > fence_t_ceil_q[31:0]) ? fence_t_ceil_i : fence_t_ceil_q[31:0]
-    };
+
+    fence_t_ceil_d[31:0] = (fence_t_ceil_i > fence_t_ceil_q[31:0]) ?
+    	fence_t_ceil_i : fence_t_ceil_q[31:0];
+    if (riscv::XLEN == 64) begin
+      fence_t_ceil_d[riscv::XLEN-1:riscv::XLEN/2] = fence_t_ceil_q[riscv::XLEN-1:riscv::XLEN/2];
+    end
 
     vsstatus_d = vsstatus_q;
     vstvec_d = vstvec_q;
@@ -1098,7 +1100,7 @@ module csr_regfile
             if (priv_lvl_o == riscv::PRIV_LVL_S && hstatus_q.vtvm && v_q) begin
               virtual_update_access_exception = 1'b1;
             end else begin
-              vsatp      = riscv::satp_t'(csr_wdata);
+              vsatp = riscv::satp_t'(csr_wdata);
               // only make ASID_LEN - 1 bit stick, that way software can figure out how many ASID bits are supported
               vsatp.asid = vsatp.asid & {{(riscv::ASIDW - AsidWidth) {1'b0}}, {AsidWidth{1'b1}}};
               // only update if we actually support this mode
@@ -1203,7 +1205,7 @@ module csr_regfile
             // intercept SATP writes if in S-Mode and TVM is enabled
             if (priv_lvl_o == riscv::PRIV_LVL_S && mstatus_q.tvm) update_access_exception = 1'b1;
             else begin
-              satp      = riscv::satp_t'(csr_wdata);
+              satp = riscv::satp_t'(csr_wdata);
               // only make ASID_LEN - 1 bit stick, that way software can figure out how many ASID bits are supported
               satp.asid = satp.asid & {{(riscv::ASIDW - AsidWidth) {1'b0}}, {AsidWidth{1'b1}}};
               // only update if we actually support this mode
@@ -1315,7 +1317,7 @@ module csr_regfile
             if (priv_lvl_o == riscv::PRIV_LVL_S && !v_q && mstatus_q.tvm)
               update_access_exception = 1'b1;
             else begin
-              hgatp      = riscv::hgatp_t'(csr_wdata);
+              hgatp = riscv::hgatp_t'(csr_wdata);
               //hardwire PPN[1:0] to zero
               hgatp[1:0] = 2'b0;
               // only make VMID_LEN - 1 bit stick, that way software can figure out how many VMID bits are supported
@@ -1586,7 +1588,13 @@ module csr_regfile
         riscv::CSR_DCACHE: dcache_d = {{riscv::XLEN - 1{1'b0}}, csr_wdata[0]};  // enable bit
         riscv::CSR_ICACHE: icache_d = {{riscv::XLEN - 1{1'b0}}, csr_wdata[0]};  // enable bit
         riscv::CSR_FENCE_T_PAD: fence_t_pad_d = {{riscv::XLEN - 32{1'b0}}, csr_wdata[31:0]};
-        riscv::CSR_FENCE_T_CEIL: fence_t_ceil_d = {{riscv::XLEN - 31{1'b0}}, csr_wdata[32:0]};
+        riscv::CSR_FENCE_T_CEIL: begin
+          if (riscv::XLEN == 64) begin
+            fence_t_ceil_d = {{riscv::XLEN - 31{1'b0}}, csr_wdata[riscv::XLEN/2:0]};
+          end else begin
+            fence_t_ceil_d = csr_wdata;
+          end
+        end
         riscv::CSR_ACC_CONS: begin
           if (CVA6Cfg.EnableAccelerator) begin
             acc_cons_d = {{riscv::XLEN - 1{1'b0}}, csr_wdata[0]};  // enable bit

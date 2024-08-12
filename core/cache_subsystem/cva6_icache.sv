@@ -155,7 +155,11 @@ module cva6_icache
         cl_offset_q;
     // request word address instead of cl address in case of NC access
     assign mem_data_o.paddr = (paddr_is_nc) ? {cl_tag_d, vaddr_q[ICACHE_INDEX_WIDTH-1:3], 3'b0} :                                         // align to 64bit
-        {cl_tag_d, vaddr_q[ICACHE_INDEX_WIDTH-1:ICACHE_OFFSET_WIDTH], {ICACHE_OFFSET_WIDTH{1'b0}}}; // align to cl
+        {cl_tag_d, vaddr_q[ICACHE_INDEX_WIDTH-1:$clog2(
+            riscv::XLEN/8
+        )], {$clog2(
+            riscv::XLEN / 8
+        ) {1'b0}}};  // align to cl
   end else begin : gen_piton_offset
     // icache fills are either cachelines or 4byte fills, depending on whether they go to the Piton I/O space or not.
     // since the piton cache system replicates the data, we can always index the full CL
@@ -586,4 +590,4 @@ module cva6_icache
 `endif
   //pragma translate_on
 
-endmodule  // cva6_icache
+endmodule : cva6_icache
