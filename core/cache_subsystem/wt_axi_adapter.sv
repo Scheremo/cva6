@@ -725,4 +725,4 @@ module wt_axi_adapter
 `endif
   //pragma translate_on
 
-endmodule : wt_l15_adapter
+endmodule : wt_axi_adapter
