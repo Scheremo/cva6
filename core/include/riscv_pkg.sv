@@ -38,7 +38,7 @@ package riscv;
   // Warning: When using STD_CACHE, configuration must be PLEN=56 and VLEN=64
   // Warning: VLEN must be superior or equal to PLEN
   localparam VLEN = (XLEN == 32) ? 32 : 64;  // virtual address length
-  localparam PLEN = (XLEN == 32) ? 30 : 56;  // physical address length
+  localparam PLEN = (cva6_config_pkg::CVA6ConfigMmuPresent) ? ((XLEN == 32) ? 30 : 56) : VLEN;  // physical address length
   localparam GPLEN = (XLEN == 32) ? 30 : 41;  // guest physical address length
 
   localparam IS_XLEN32 = (XLEN == 32) ? 1'b1 : 1'b0;
